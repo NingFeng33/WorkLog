@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <title>Work Log</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#calendar" aria-label="Work Log home">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span><strong>Work Log</strong><small>Your days, in focus</small></span>
+      </a>
+      <nav class="tabs" aria-label="Main navigation">
+        <button class="tab active" data-view="calendar">Calendar</button>
+        <button class="tab" data-view="stats">Statistics</button>
+      </nav>
+      <button class="button button-primary top-add" id="addEntry"><span aria-hidden="true">＋</span> Add record</button>
+    </header>
+
+    <main>
+      <section id="calendarView" class="view">
+        <div class="page-heading">
+          <div><p class="eyebrow">YOUR WORK, WELL TRACKED</p><h1>Work calendar</h1><p class="subheading">Select a day to add or update what you worked on.</p></div>
+          <div class="month-controls">
+            <button class="icon-button" id="prevMonth" aria-label="Previous month">‹</button>
+            <h2 id="monthTitle" aria-live="polite"></h2>
+            <button class="icon-button" id="nextMonth" aria-label="Next month">›</button>
+            <button class="button button-light" id="todayButton">Today</button>
+          </div>
+        </div>
+        <div class="calendar-card">
+          <div class="weekday-row" aria-hidden="true">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+          <div class="calendar-grid" id="calendarGrid" aria-label="Monthly work calendar"></div>
+          <div class="calendar-foot"><span class="legend-dot"></span><span>Work recorded</span><span class="month-total" id="monthTotal"></span></div>
+        </div>
+      </section>
+
+      <section id="statsView" class="view hidden">
+        <div class="page-heading">
+          <div><p class="eyebrow">SEE THE BIG PICTURE</p><h1>Statistics</h1><p class="subheading">Hours and project totals for any period.</p></div>
+        </div>
+        <div class="stats-controls">
+          <label>Period<select id="periodSelect"><option value="week">Week</option><option value="month" selected>Month</option><option value="year">Year</option></select></label>
+          <label>Choose a date<input id="periodDate" type="date"></label>
+          <button class="button button-primary" id="exportButton">↓ Export CSV</button>
+        </div>
+        <p class="period-caption" id="periodCaption"></p>
+        <div class="stat-cards">
+          <article class="stat-card stat-primary"><span>Total hours</span><strong id="totalHours">0</strong><small>hours worked</small></article>
+          <article class="stat-card"><span>Work days</span><strong id="totalDays">0</strong><small>days with a record</small></article>
+          <article class="stat-card"><span>Records</span><strong id="totalRecords">0</strong><small>work entries</small></article>
+        </div>
+        <section class="projects-card">
+          <div class="section-title"><div><h2>Hours by project</h2><p>Grouped by project number and name</p></div></div>
+          <div id="projectStats" class="project-list"></div>
+        </section>
+      </section>
+    </main>
+    <footer><span>Work Log</span><span>Your data stays in a local database on your server.</span></footer>
+  </div>
+
+  <dialog id="entryDialog" class="entry-dialog">
+    <form id="entryForm">
+      <div class="dialog-heading"><div><p class="eyebrow">WORK RECORD</p><h2 id="dialogTitle">Add a record</h2><p id="dialogDate" class="subheading"></p></div><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div>
+      <input type="hidden" id="entryId">
+      <label>Project number<input id="projectNumber" name="project_number" required maxlength="80" placeholder="e.g. 2024-015"></label>
+      <label>Project name<input id="projectName" name="project_name" required maxlength="160" placeholder="Project name"></label>
+      <div class="form-row">
+        <label>Location<input id="location" name="location" maxlength="160" placeholder="Office, site, or remote"></label>
+        <label>Hours<input id="hours" name="hours" type="number" required min="0.25" max="24" step="0.25" value="8"></label>
+      </div>
+      <label>Note<textarea id="note" name="note" rows="3" maxlength="4000" placeholder="What did you work on?"></textarea></label>
+      <p class="form-error" id="formError" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button button-danger hidden" id="deleteEntry">Delete</button><span class="action-spacer"></span><button type="button" class="button button-light close-dialog">Cancel</button><button type="submit" class="button button-primary" id="saveEntry">Save record</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
