@@ -10,7 +10,7 @@ import os
 import re
 import sqlite3
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -239,20 +239,36 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "Not found."}, 404)
             return
         try:
-            entry = parse_entry(self.read_json())
+            payload = self.read_json()
+            entry = parse_entry(payload)
+            end_date = valid_date(payload.get("end_date", entry["work_date"])) if isinstance(payload, dict) else entry["work_date"]
+            start_day = date.fromisoformat(entry["work_date"])
+            end_day = date.fromisoformat(end_date)
+            if end_day < start_day:
+                raise ValueError("End date must be on or after the start date.")
+            if (end_day - start_day).days > 365:
+                raise ValueError("Date range cannot be longer than 366 days.")
+            entries = [
+                {**entry, "work_date": (start_day + timedelta(days=offset)).isoformat()}
+                for offset in range((end_day - start_day).days + 1)
+            ]
         except ValueError as exc:
             self.send_json({"error": str(exc)}, 400)
             return
         with db_session() as db:
-            cursor = db.execute(
-                "INSERT INTO entries (work_date, project_number, project_name, location, hours, note) "
-                "VALUES (:work_date, :project_number, :project_name, :location, :hours, :note)", entry,
-            )
-            row = db.execute(
-                "SELECT id, work_date, project_number, project_name, location, hours, note FROM entries WHERE id=?",
-                (cursor.lastrowid,),
-            ).fetchone()
-        self.send_json(entry_dict(row), 201)
+            inserted_ids = []
+            for daily_entry in entries:
+                cursor = db.execute(
+                    "INSERT INTO entries (work_date, project_number, project_name, location, hours, note) "
+                    "VALUES (:work_date, :project_number, :project_name, :location, :hours, :note)", daily_entry,
+                )
+                inserted_ids.append(cursor.lastrowid)
+            rows = db.execute(
+                "SELECT id, work_date, project_number, project_name, location, hours, note "
+                f"FROM entries WHERE id IN ({','.join('?' for _ in inserted_ids)}) ORDER BY work_date, id",
+                inserted_ids,
+            ).fetchall()
+        self.send_json([entry_dict(row) for row in rows], 201)
 
     def do_PUT(self) -> None:
         match = re.fullmatch(r"/api/entries/(\d+)", urlparse(self.path).path)

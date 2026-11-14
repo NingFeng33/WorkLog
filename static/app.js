@@ -144,10 +144,13 @@ function openDialog(date = selectedDate, entry = null) {
   $('#entryId').value = entry?.id || '';
   $('#dialogTitle').textContent = entry ? 'Edit record' : 'Add a record';
   $('#dialogDate').textContent = prettyDate(date);
+  $('#dateRangeRow').classList.toggle('hidden', Boolean(entry));
+  $('#startDate').value = date;
+  $('#endDate').value = date;
   $('#projectNumber').value = entry?.project_number || '';
   $('#projectName').value = entry?.project_name || '';
   $('#location').value = entry?.location || '';
-  $('#hours').value = entry?.hours ?? 8;
+  $('#hours').value = entry?.hours ?? 12;
   $('#note').value = entry?.note || '';
   $('#formError').textContent = '';
   $('#deleteEntry').classList.toggle('hidden', !entry);
@@ -187,22 +190,23 @@ $('#entryForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const id = $('#entryId').value;
   const payload = {
-    work_date: selectedDate,
+    work_date: id ? selectedDate : $('#startDate').value,
     project_number: $('#projectNumber').value,
     project_name: $('#projectName').value,
     location: $('#location').value,
     hours: Number($('#hours').value),
     note: $('#note').value,
   };
+  if (!id) payload.end_date = $('#endDate').value;
   $('#saveEntry').disabled = true;
   try {
-    await api(id ? `/api/entries/${id}` : '/api/entries', {
+    const saved = await api(id ? `/api/entries/${id}` : '/api/entries', {
       method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     });
     closeDialog();
     await loadCalendar();
     if (currentView === 'stats') await loadStats();
-    showToast(id ? 'Record updated.' : 'Record saved.');
+    showToast(id ? 'Record updated.' : `${saved.length} record${saved.length === 1 ? '' : 's'} saved.`);
   } catch (error) {
     $('#formError').textContent = error.message;
   } finally {

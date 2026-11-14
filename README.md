@@ -23,7 +23,8 @@ If local port 8000 is already in use, use another local port on the left side, f
 
 ## Use
 
-- Click a date to add a record; click an existing record on the calendar to edit or delete it.
+- Click a date to add a record; for repeated work, choose a start and end date to create the same record for each day in that inclusive range. Click an existing record on the calendar to edit or delete it.
+- New records default to 12 hours per day.
 - Each record has a date, project number and name, location, hours, and note. More than one project record can be added to a day if needed.
 - Use **Statistics** to view weekly, monthly, or yearly totals and hours grouped by project.
 - **Export CSV** downloads the records for the selected period as a spreadsheet-friendly file.
