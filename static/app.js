@@ -122,7 +122,7 @@ async function loadStats() {
     const stats = await api(`/api/stats?start=${range.start}&end=${range.end}`);
     $('#totalHours').textContent = formatHours(stats.hours);
     $('#totalDays').textContent = stats.days;
-    $('#totalRecords').textContent = stats.records;
+    $('#relayRecords').textContent = stats.relay_records;
     const list = $('#projectStats');
     if (!stats.projects.length) {
       list.innerHTML = '<div class="empty-state">No work records for this period yet.</div>';
@@ -131,10 +131,33 @@ async function loadStats() {
         <div class="project-row">
           <div><div class="project-name">${escapeHtml(project.project_name)}</div><div class="project-number">${escapeHtml(project.project_number)}</div></div>
           <div class="project-hours">${formatHours(project.hours)} h</div>
-          <div class="project-records">${project.records} ${project.records === 1 ? 'record' : 'records'}</div>
+          <div class="project-records">${project.relay_records} relay ${project.relay_records === 1 ? 'record' : 'records'}</div>
         </div>`).join('');
     }
     $('#exportButton').onclick = () => { window.location.href = `/api/export.csv?start=${range.start}&end=${range.end}`; };
+    $('#reportButton').onclick = async () => {
+      const year = date.slice(0, 4);
+      const button = $('#reportButton');
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/export-annual.pdf?year=${year}`);
+        if (!response.ok) {
+          const body = await response.json();
+          throw new Error(body.error || `Request failed (${response.status}).`);
+        }
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${year}worklog.pdf`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast(`Saved on server: Year Report/${year}/${year}worklog.pdf`);
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    };
   } catch (error) {
     showToast(error.message);
   }

@@ -15,6 +15,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from reports import build_annual_report
+
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("WORKLOG_DB", ROOT / "data" / "worklog.sqlite3"))
@@ -143,6 +145,8 @@ class Handler(BaseHTTPRequestHandler):
             self.get_stats(parse_qs(parsed.query))
         elif parsed.path == "/api/export.csv":
             self.export_csv(parse_qs(parsed.query))
+        elif parsed.path == "/api/export-annual.pdf":
+            self.export_annual_report(parse_qs(parsed.query))
         else:
             self.send_json({"error": "Not found."}, 404)
 
@@ -191,12 +195,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         with db_session() as db:
             totals = db.execute(
-                "SELECT COALESCE(SUM(hours), 0) AS hours, COUNT(*) AS records, "
+                "SELECT COALESCE(SUM(hours), 0) AS hours, "
+                "SUM(CASE WHEN lower(note) LIKE '%relay%' THEN 1 ELSE 0 END) AS relay_records, "
                 "COUNT(DISTINCT work_date) AS days FROM entries WHERE work_date BETWEEN ? AND ?",
                 (start, end),
             ).fetchone()
             projects = db.execute(
-                "SELECT project_number, project_name, SUM(hours) AS hours, COUNT(*) AS records "
+                "SELECT project_number, project_name, SUM(hours) AS hours, "
+                "SUM(CASE WHEN lower(note) LIKE '%relay%' THEN 1 ELSE 0 END) AS relay_records "
                 "FROM entries WHERE work_date BETWEEN ? AND ? "
                 "GROUP BY project_number, project_name ORDER BY hours DESC, project_name COLLATE NOCASE",
                 (start, end),
@@ -205,7 +211,7 @@ class Handler(BaseHTTPRequestHandler):
             "start": start,
             "end": end,
             "hours": round(totals["hours"], 2),
-            "records": totals["records"],
+            "relay_records": totals["relay_records"],
             "days": totals["days"],
             "projects": [dict(row) for row in projects],
         })
@@ -231,6 +237,37 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/csv; charset=utf-8")
         self.send_header("Content-Disposition", f'attachment; filename="worklog-{start}-to-{end}.csv"')
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def export_annual_report(self, query: dict[str, list[str]]) -> None:
+        year_value = query.get("year", [""])[0]
+        if not re.fullmatch(r"\d{4}", year_value) or not 1 <= int(year_value) <= 9999:
+            self.send_json({"error": "Choose a valid four-digit year."}, 400)
+            return
+        year = int(year_value)
+        start, end = f"{year:04d}-01-01", f"{year:04d}-12-31"
+        try:
+            with db_session() as db:
+                rows = db.execute(
+                    "SELECT work_date, project_number, project_name, location, hours, note "
+                    "FROM entries WHERE work_date BETWEEN ? AND ? ORDER BY work_date, id",
+                    (start, end),
+                ).fetchall()
+            report_path = build_annual_report(
+                year,
+                [dict(row) for row in rows],
+                ROOT / "Year Report" / str(year),
+            )
+            body = report_path.read_bytes()
+        except OSError as exc:
+            self.send_json({"error": f"Could not save the annual report: {exc}"}, 500)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Disposition", f'attachment; filename="{year}worklog.pdf"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 

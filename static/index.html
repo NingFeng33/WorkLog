@@ -49,13 +49,14 @@
         <div class="stats-controls">
           <label>Period<select id="periodSelect"><option value="week">Week</option><option value="month" selected>Month</option><option value="year">Year</option></select></label>
           <label>Choose a date<input id="periodDate" type="date"></label>
-          <button class="button button-primary" id="exportButton">↓ Export CSV</button>
+          <button class="button button-light" id="exportButton">↓ Export CSV</button>
+          <button class="button button-primary" id="reportButton">↓ Annual PDF</button>
         </div>
         <p class="period-caption" id="periodCaption"></p>
         <div class="stat-cards">
           <article class="stat-card stat-primary"><span>Total hours</span><strong id="totalHours">0</strong><small>hours worked</small></article>
           <article class="stat-card"><span>Work days</span><strong id="totalDays">0</strong><small>days with a record</small></article>
-          <article class="stat-card"><span>Records</span><strong id="totalRecords">0</strong><small>work entries</small></article>
+          <article class="stat-card"><span>Relay records</span><strong id="relayRecords">0</strong><small>notes containing “relay”</small></article>
         </div>
         <section class="projects-card">
           <div class="section-title"><div><h2>Hours by project</h2><p>Grouped by project number and name</p></div></div>
