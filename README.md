@@ -2,6 +2,14 @@
 
 A small, self-hosted work-hours calendar. It uses Python's standard library and SQLite, so it has no package installation step and no external service requirement.
 
+## Build and run on Windows
+
+On a Windows computer with Python 3 installed, double-click `build_windows.bat` (or run it from Command Prompt). It installs PyInstaller and creates `dist\WorkLog.exe`. Copy the whole `dist` folder to the Windows computer where you want to use Work Log, then double-click `WorkLog.exe`; it opens the app in your browser. Keep the window open while using it.
+
+The database is stored in `dist\data\worklog.sqlite3`, beside the executable, and annual PDFs are saved under `dist\Year Report`. If the project already has a database when you build, the script copies it into `dist\data`.
+
+The executable must be built on Windows because PyInstaller does not cross-compile Windows executables from Linux.
+
 ## Run on Ubuntu
 
 ```sh

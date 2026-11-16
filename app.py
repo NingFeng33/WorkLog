@@ -9,6 +9,9 @@ import json
 import os
 import re
 import sqlite3
+import sys
+import threading
+import webbrowser
 from contextlib import contextmanager
 from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -19,7 +22,9 @@ from reports import build_annual_report
 
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get("WORKLOG_DB", ROOT / "data" / "worklog.sqlite3"))
+RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", ROOT))
+APP_DATA_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
+DB_PATH = Path(os.environ.get("WORKLOG_DB", APP_DATA_DIR / "data" / "worklog.sqlite3"))
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("PORT", "8000"))
 MAX_BODY = 64 * 1024
@@ -134,11 +139,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/":
-            self.serve_file(ROOT / "static" / "index.html", "text/html; charset=utf-8")
+            self.serve_file(RESOURCE_ROOT / "static" / "index.html", "text/html; charset=utf-8")
         elif parsed.path == "/app.css":
-            self.serve_file(ROOT / "static" / "app.css", "text/css; charset=utf-8")
+            self.serve_file(RESOURCE_ROOT / "static" / "app.css", "text/css; charset=utf-8")
         elif parsed.path == "/app.js":
-            self.serve_file(ROOT / "static" / "app.js", "text/javascript; charset=utf-8")
+            self.serve_file(RESOURCE_ROOT / "static" / "app.js", "text/javascript; charset=utf-8")
         elif parsed.path == "/api/entries":
             self.get_entries(parse_qs(parsed.query))
         elif parsed.path == "/api/stats":
@@ -257,7 +262,7 @@ class Handler(BaseHTTPRequestHandler):
             report_path = build_annual_report(
                 year,
                 [dict(row) for row in rows],
-                ROOT / "Year Report" / str(year),
+                APP_DATA_DIR / "Year Report" / str(year),
             )
             body = report_path.read_bytes()
         except OSError as exc:
@@ -350,10 +355,12 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     initialize()
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    threading.Timer(1.0, lambda: webbrowser.open(f"http://{HOST}:{PORT}")).start()
     print(f"Work Log running on http://{HOST}:{PORT}")
     print(f"Database: {DB_PATH}")
     print("Press Ctrl+C to stop.")
     try:
-        ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
+        server.serve_forever()
     except KeyboardInterrupt:
         print("\nWork Log stopped.")
