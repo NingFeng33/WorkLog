@@ -1,25 +1,70 @@
+
 @echo off
 setlocal
 cd /d "%~dp0"
 
-where py >nul 2>nul
+echo ==============================
+echo WorkLog Windows Builder
+echo ==============================
+
+REM Check Python
+where python >nul 2>nul
 if errorlevel 1 (
-  echo Python 3 is required. Install it from https://www.python.org/downloads/windows/ and enable the py launcher.
-  exit /b 1
+    echo Python is not installed or not in PATH.
+    pause
+    exit /b 1
 )
 
-py -3 -m pip install --upgrade pyinstaller
+REM Create virtual environment if missing
+if not exist ".venv\Scripts\python.exe" (
+    python -m venv .venv
+    if errorlevel 1 exit /b 1
+)
+
+REM Use project virtual environment
+call ".venv\Scripts\activate.bat"
+
+REM Upgrade pip
+python -m pip install --upgrade pip
+
+REM Install requirements
+if exist "requirements.txt" (
+    python -m pip install -r requirements.txt
+    if errorlevel 1 exit /b 1
+)
+
+REM Install PyInstaller
+python -m pip install pyinstaller
 if errorlevel 1 exit /b 1
 
-py -3 -m PyInstaller --noconfirm --clean --onefile --name WorkLog --add-data "static;static" app.py
-if errorlevel 1 exit /b 1
+REM Build EXE
+python -m PyInstaller --noconfirm --clean --onefile ^
+    --name WorkLog ^
+    --add-data "static;static" ^
+    app.py
 
+if errorlevel 1 (
+    echo BUILD FAILED!
+    pause
+    exit /b 1
+)
+
+REM Prepare distribution folders
 if not exist "dist\data" mkdir "dist\data"
-if exist "data\worklog.sqlite3" copy /y "data\worklog.sqlite3" "dist\data\worklog.sqlite3" >nul
+
+if exist "data\worklog.sqlite3" (
+    if not exist "dist\data\worklog.sqlite3" (
+        copy "data\worklog.sqlite3" "dist\data\worklog.sqlite3"
+    )
+)
+
 if not exist "dist\Year Report" mkdir "dist\Year Report"
 
 echo.
-echo Build complete: %CD%\dist\WorkLog.exe
-echo Copy the whole dist folder to the Windows computer and double-click WorkLog.exe.
-echo Your database will be kept in dist\data\worklog.sqlite3.
+echo ==============================
+echo BUILD COMPLETED!
+echo ==============================
+echo EXE: dist\WorkLog.exe
+
+pause
 endlocal

@@ -1,5 +1,30 @@
+
+# Python
 __pycache__/
 *.py[cod]
-data/*
-!data/.gitkeep
+.venv/
+venv/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Local database and user records
+data/*.sqlite3
+data/*.db
+
+# Generated reports
 Year Report/
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
